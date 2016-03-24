@@ -22,7 +22,7 @@ void wad_open(wad_file_t* wad, const char* path) {
 	fread(&wad->numFiles, sizeof(int), 1, wad->file);
 	fread(&wad->directoryOffset, sizeof(int), 1, wad->file);
 	fseek(wad->file, wad->directoryOffset, SEEK_SET);
-	wad->lumps = (wad_lump_t*)calloc(wad->numFiles, sizeof(wad_lump_t));
+	wad->lumps = (wad_lump_t*)calloc(wad->numFiles, sizeof(wad_lump_t));	
 	fread(wad->lumps, sizeof(wad_lump_t), wad->numFiles, wad->file);
 }
 
@@ -36,7 +36,7 @@ void wad_seek(wad_file_t* wad, wad_lump_t* lump) {
 
 int wad_findLumpIndex(wad_file_t* wad, const char* name, int startIndex) {
 	for (int i = startIndex; i < wad->numFiles; i++) {
-		if (strcmp(wad->lumps[i].name, name) == 0)
+		if (strncmp(wad->lumps[i].name, name, 8) == 0)
 			return i;
 	}
 	assertexit(0, "Lump '%s' not found!", name);

@@ -18,18 +18,18 @@ typedef struct {
 
 
 typedef struct {
-	int x, y; // x, y position
+	short x, y; // x, y position
 } vertex_t;
 
 
 // SIDEDEF 
 typedef struct {
-	int		xofs;			// Texture x offset
-	int		yofs;			// Texture y offset
+	short	xofs;			// Texture x offset
+	short	yofs;			// Texture y offset
 	char	uppertexture[8];
 	char	lowertexture[8];
 	char	middletexture[8];
-	int		sectornum;		// Sector number this sidedef faces
+	short	sectornum;		// Sector number this sidedef faces
 } sidedef_t;
 
 // ALL TEH THINGS!!
@@ -42,22 +42,51 @@ typedef struct {
 
 // LINEDEF 
 typedef struct {
-	int v1, v2;     // Start and end vertex
-	int flags;      // Flags
-	int special;    // Special type
-	int tag;        // Sector tag
-	int sidenum[2]; // sidenum[1] is back side, -1 if one-sided
+	short v1, v2;     // Start and end vertex
+	short flags;      // Flags
+	short special;    // Special type
+	short tag;        // Sector tag
+	short sidenum[2]; // sidenum[1] is back side, -1 if one-sided
 } linedef_t;
+
+typedef struct {
+	short startVertexIndex;
+	short endVertexIndex;
+	short angle;
+	short linedefIndex;
+	short direction;
+	short offset;
+}  seg_t;
+
+typedef struct {
+	short segCount;
+	short firstSegIndex;
+} ssector_t;
+
+typedef struct {
+	short top, bottom, left, right;
+} bbox_t;
+
+typedef struct {
+	short partitionX;
+	short partitionY;
+	short partitionXOffset;
+	short partitionYOffset;
+	bbox_t leftBBox;
+	bbox_t rightBBox;
+	short leftNode;
+	short rightNode;
+} node_t;
 
 // SECTOR 
 typedef struct {
-	int		floorheight;
-	int		ceilingheight;
+	short	floorheight;
+	short	ceilingheight;
 	char	floorflat[8];
 	char    ceilingflat[8];
-	int		lightlevel;
-	int		type;
-	int		tag;
+	short	lightlevel;
+	short	type;
+	short	tag;
 } sector_t;
 
 typedef struct {
@@ -65,20 +94,29 @@ typedef struct {
 	int			width, height;
 	vertex_t	centerv;
 
-	int			numthings;
+	int			numThings;
 	thing_t*	things;
 
-	int			numlinedefs;
+	int			numLinedefs;
 	linedef_t*	linedefs;
 
-	int			numsidedefs;
+	int			numSidedefs;
 	sidedef_t*	sidedefs;
 
-	int			numvertexes;
+	int			numVertexes;
 	vertex_t*	vertexes;
 
-	int			numsectors;
+	int			numSectors;
 	sector_t*	sectors;
+
+	int			numSegs;
+	seg_t*		segs;
+
+	int			numNodes;
+	node_t*		nodes;
+
+	int			numSubSectors;
+	seg_t*		subSectors;
 } map_t;
 
 // Lump info
