@@ -1,4 +1,5 @@
 #pragma once
+#include <stdio.h>
 
 // WAD
 typedef struct {
@@ -8,7 +9,7 @@ typedef struct {
 } wad_lump_t;
 
 typedef struct {
-	FILE* wadFile;
+	FILE* file;
 	char header[4];
 	int numFiles;
 	int directoryOffset;
@@ -33,10 +34,10 @@ typedef struct {
 
 // ALL TEH THINGS!!
 typedef struct {
-	int x, y;  // x, y position
-	int angle; // Facing angle
-	int type;  // DoomEd thing type
-	int flags; // Flags
+	short x, y;  // x, y position
+	short angle; // Facing angle
+	short type;  // DoomEd thing type
+	short flags; // Flags
 } thing_t;
 
 // LINEDEF 

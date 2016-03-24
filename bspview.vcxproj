@@ -142,10 +142,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="main.c" />
+    <ClCompile Include="map.c" />
     <ClCompile Include="wad.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="doom_types.h" />
+    <ClInclude Include="map.h" />
+    <ClInclude Include="wad.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
