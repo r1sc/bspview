@@ -18,7 +18,7 @@ typedef struct {
 } vertex_t;
 
 
-// SIDEDEF lump struct
+// SIDEDEF 
 typedef struct {
 	int		xofs;			// Texture x offset
 	int		yofs;			// Texture y offset
@@ -28,7 +28,7 @@ typedef struct {
 	int		sectornum;		// Sector number this sidedef faces
 } sidedef_t;
 
-// THINGS lump struct
+// ALL TEH THINGS!!
 typedef struct {
 	int x, y;  // x, y position
 	int angle; // Facing angle
@@ -36,7 +36,7 @@ typedef struct {
 	int flags; // Flags
 } thing_t;
 
-// LINEDEF lump struct
+// LINEDEF 
 typedef struct {
 	int v1, v2;     // Start and end vertex
 	int flags;      // Flags
@@ -45,7 +45,7 @@ typedef struct {
 	int sidenum[2]; // sidenum[1] is back side, -1 if one-sided
 } linedef_t;
 
-// SECTOR lump struct
+// SECTOR 
 typedef struct {
 	int		floorheight;
 	int		ceilingheight;
@@ -58,25 +58,43 @@ typedef struct {
 
 typedef struct {
 	char		name[8];
-	int			width, height;	// Dimensions of map
-	vertex_t	centerv;		// Center point
+	int			width, height;
+	vertex_t	centerv;
 
-	int			numthings;		// Total number of THINGS
-	thing_t*	things;			// Array of all the THINGS
+	int			numthings;		
+	thing_t*	things;
 
-	int			numlinedefs;	// Total number of LINEDEFS
-	linedef_t*	linedefs;		// Array of all the LINEDEFS
+	int			numlinedefs;
+	linedef_t*	linedefs;
 
-	int			numsidedefs;	// Total number of SIDEDEFS
-	sidedef_t*	sidedefs;		// Array of all the SIDEDEFS
+	int			numsidedefs;
+	sidedef_t*	sidedefs;
 
-	int			numvertexes;	// Total number of VERTEXES
-	vertex_t*	vertexes;		// Array of all the VERTEXES
+	int			numvertexes;
+	vertex_t*	vertexes;
 
-	int			numsectors;		// Total number of SECTORS
-	sector_t*	sectors;		// Array of all the SECTORS
+	int			numsectors;
+	sector_t*	sectors;
 } map_t;
 
+// Lump info
+typedef struct {
+	int filepos;
+	int size;
+	char name[8];
+} lumpinfo_t;
+
+// WAD info
+typedef struct {
+	char id[4];
+	int numlumps;
+	int infotableofs;
+} wadinfo_t;
+
+typedef struct {
+	wadinfo_t   info;  // WAD file header information
+	lumpinfo_t* lumps; // Array of all the lump definitions
+} wadfile_t;
 
 void main() {
 	FILE* wadFile = fopen("DOOM1.WAD", "rb");
