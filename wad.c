@@ -1,112 +1,47 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "doom_types.h"
 
-typedef struct {
-	char header[4];
-	int numFiles;
-	int offset;
-}t_WAD;
+void wad_open(wad_file_t* wad, const char* path) {
+	wad->wadFile = fopen("DOOM1.WAD", "rb");
+	fread(wad->header, sizeof(char), 4, wad->wadFile);
+	fread(&wad->numFiles, sizeof(int), 1, wad->wadFile);
+	fread(&wad->directoryOffset, sizeof(int), 1, wad->wadFile);
+	fseek(wad->wadFile, wad->directoryOffset, SEEK_SET);
+	wad->lumps = (wad_lump_t*)calloc(wad->numFiles, sizeof(wad_lump_t));
+	fread(wad->lumps, sizeof(wad_lump_t), wad->numFiles, wad->wadFile);
+}
 
-typedef struct {
-	int offset;
-	int size;
-	char name[8];
-}t_WAD_Lump;
+void wad_close(wad_file_t* wad) {
+	fclose(wad->wadFile);
+}
 
-typedef struct {
-	int x, y; // x, y position
-} vertex_t;
+void wad_seek(wad_file_t* wad, wad_lump_t* lump) {
+	fseek(wad->wadFile, lump->offset, SEEK_SET);
+}
 
-
-// SIDEDEF 
-typedef struct {
-	int		xofs;			// Texture x offset
-	int		yofs;			// Texture y offset
-	char	uppertexture[8];
-	char	lowertexture[8];
-	char	middletexture[8];
-	int		sectornum;		// Sector number this sidedef faces
-} sidedef_t;
-
-// ALL TEH THINGS!!
-typedef struct {
-	int x, y;  // x, y position
-	int angle; // Facing angle
-	int type;  // DoomEd thing type
-	int flags; // Flags
-} thing_t;
-
-// LINEDEF 
-typedef struct {
-	int v1, v2;     // Start and end vertex
-	int flags;      // Flags
-	int special;    // Special type
-	int tag;        // Sector tag
-	int sidenum[2]; // sidenum[1] is back side, -1 if one-sided
-} linedef_t;
-
-// SECTOR 
-typedef struct {
-	int		floorheight;
-	int		ceilingheight;
-	char	floorflat[8];
-	char    ceilingflat[8];
-	int		lightlevel;
-	int		type;
-	int		tag;
-} sector_t;
-
-typedef struct {
-	char		name[8];
-	int			width, height;
-	vertex_t	centerv;
-
-	int			numthings;		
-	thing_t*	things;
-
-	int			numlinedefs;
-	linedef_t*	linedefs;
-
-	int			numsidedefs;
-	sidedef_t*	sidedefs;
-
-	int			numvertexes;
-	vertex_t*	vertexes;
-
-	int			numsectors;
-	sector_t*	sectors;
-} map_t;
-
-// Lump info
-typedef struct {
-	int filepos;
-	int size;
-	char name[8];
-} lumpinfo_t;
-
-// WAD info
-typedef struct {
-	char id[4];
-	int numlumps;
-	int infotableofs;
-} wadinfo_t;
-
-typedef struct {
-	wadinfo_t   info;  // WAD file header information
-	lumpinfo_t* lumps; // Array of all the lump definitions
-} wadfile_t;
+wad_lump_t* wad_findLump(wad_file_t* wad, const char* name) {
+	for (int i = 0; i < wad->numFiles; i++) {
+		if (strcmp(wad->lumps[i].name, name) == 0)
+			return &(wad->lumps[i]);
+	}
+	return NULL;
+}
 
 void main() {
-	FILE* wadFile = fopen("DOOM1.WAD", "rb");
-	t_WAD wad;
-	fread(&wad, sizeof(t_WAD), 1, wadFile);
-	fseek(wadFile, wad.offset, SEEK_SET);
-	t_WAD_Lump* lumps = (t_WAD_Lump*)calloc(wad.numFiles, sizeof(t_WAD_Lump));
-	fread(lumps, sizeof(t_WAD_Lump), wad.numFiles, wadFile);
-	for (int i = 0; i < wad.numFiles; i++)
+	wad_file_t wadFile;
+	wad_open(&wadFile, "..\\DOOM1.WAD");
+	for (int i = 0; i < wadFile.numFiles; i++)
 	{
-		printf("%.8s\n", lumps[i].name);
+		printf("%.8s\n", wadFile.lumps[i].name);
 	}
-	fclose(wadFile);
+	wad_lump_t* lump = wad_findLump(&wadFile, "DMXGUS");
+	wad_seek(&wadFile, lump);
+	char* buffer = (char*)malloc(lump->size);
+	fread(buffer, 1, lump->size, wadFile.wadFile);
+	free(buffer);
+
+	wad_close(&wadFile);
 	getchar();
 }
