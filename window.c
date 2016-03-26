@@ -86,7 +86,7 @@ void window_open(int width, int height)
 	{
 		MessageBox(NULL, "Window Creation Failed!", "Error!",
 			MB_ICONEXCLAMATION | MB_OK);
-		return 0;
+		//return 0;
 	}
 
 	ShowWindow(hwnd, 1);

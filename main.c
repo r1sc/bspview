@@ -40,8 +40,35 @@ void main() {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
+	GLdouble padding = 100;
+
 	node_t root = map.nodes[map.numNodes -1];
-	glOrtho(root.leftBBox.left, root.rightBBox.right, root.rightBBox.bottom, root.rightBBox.top, -1, 1);
+
+	short top, bottom, left, right; 
+
+	if (root.leftBBox.top > root.rightBBox.top)
+		top = root.leftBBox.top;
+	else
+		top = root.rightBBox.top;
+
+	if (root.leftBBox.bottom > root.rightBBox.bottom)
+		bottom = root.rightBBox.bottom;
+	else
+		bottom = root.leftBBox.bottom;
+
+	if (root.leftBBox.right> root.rightBBox.right)
+		right = root.leftBBox.right;
+	else
+		right = root.rightBBox.right;
+
+	if (root.leftBBox.left > root.rightBBox.left)
+		left = root.rightBBox.left;
+	else
+		left = root.leftBBox.left;
+
+
+
+	glOrtho(left - padding, right + padding, bottom - padding, top + padding, -1, 1);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	
