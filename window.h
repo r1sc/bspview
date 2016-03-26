@@ -1,6 +1,6 @@
 #pragma once
 #include <Windows.h>
-#include <gl\GL.h>
+#include <GL\gl.h>
 WNDCLASSEX wc;
 HWND hwnd;
 HGLRC glContext;
