@@ -5,6 +5,26 @@
 #include "map.h"
 #include "window.h"
 
+typedef struct {
+	float x, y;
+} point_t;
+
+int isPointInBoundingBox(bbox_t* box, point_t* point) {
+	if (box->top > point->y && box->bottom < point->y && box->left < point->x && box->right > point->x)
+		return TRUE;
+	return FALSE;
+}
+
+int isPointNode(node_t* node, point_t* point) {
+	if (isPointInBoundingBox(&node->leftBBox, point)) {
+
+	}
+}
+
+void traverseTree(node_t* node, point_t* eye) {
+	
+}
+
 void main() {
 	wad_file_t wadFile;
 	wad_open(&wadFile, "..\\DOOM1.WAD");
@@ -21,21 +41,23 @@ void main() {
 	glLoadIdentity();
 
 	node_t root = map.nodes[map.numNodes -1];
-	glOrtho(root.leftBBox.left, root.rightBBox.right, root.leftBBox.bottom, root.leftBBox.top, -1, 1);
+	glOrtho(root.leftBBox.left, root.rightBBox.right, root.rightBBox.bottom, root.rightBBox.top, -1, 1);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-
+	
 	while (window_update())
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		
 		glBegin(GL_LINES);
-		for (int i = 0; i < map.numLinedefs; i++)
+		/*for (int i = 0; i < map.numLinedefs; i++)
 		{
 			vertex_t v1 = map.vertexes[map.linedefs[i].v1];
 			vertex_t v2 = map.vertexes[map.linedefs[i].v2];
 			glVertex2s(v1.x, v1.y);
 			glVertex2s(v2.x, v2.y);
-		}
+		}*/
+		
+		
 		glEnd();
 
 		window_swap();
