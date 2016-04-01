@@ -52,22 +52,32 @@ int classifyNode(node_t* node, vertex_t* point) {
 }
 
 void traverseTree(node_t* node, vertex_t* eye);
-void handleNode(short nodeValue, vertex_t* eye) {
+void handleNode(short nodeValue, vertex_t* eye, int side) {
 	short value = nodeValue & 0x7FFF;
 	if (nodeValue >> 15) {
 		// TODO: Render?
 		ssector_t ssector = map.subSectors[value];
-		seg_t* seg;
+		seg_t seg;
 		for (int i = ssector.firstSegIndex; i < ssector.firstSegIndex + ssector.segCount; i++)
 		{
-			seg = &map.segs[i];
-			vertex_t v1 = map.vertexes[seg->startVertexIndex];
-			vertex_t v2 = map.vertexes[seg->endVertexIndex];
-			glColor3ub(seg->startVertexIndex, seg->startVertexIndex, seg->startVertexIndex);
-			glVertex3s(v1.x, 100, v1.y);
-			glVertex3s(v2.x, 100, v2.y);
+			seg = map.segs[i];
+			linedef_t lineDef = map.linedefs[seg.linedefIndex];
+			if (lineDef.sidenum[side] == -1)
+				continue;
+			sidedef_t sideDef = map.sidedefs[lineDef.sidenum[side]];
+			sector_t sector = map.sectors[sideDef.sectornum];
+			vertex_t v1 = map.vertexes[seg.startVertexIndex];
+			vertex_t v2 = map.vertexes[seg.endVertexIndex];
+			glColor3ub(seg.startVertexIndex, seg.startVertexIndex, seg.startVertexIndex);
+
+			glVertex3s(v1.x, sector.floorheight, v1.y);
+			glVertex3s(v2.x, sector.floorheight, v2.y);
 			glVertex3s(v2.x, 0, v2.y);
 			glVertex3s(v1.x, 0, v1.y);
+			glVertex3s(v1.x, sector.ceilingheight + 20, v1.y);
+			glVertex3s(v2.x, sector.ceilingheight + 20, v2.y);
+			glVertex3s(v2.x, sector.ceilingheight, v2.y);
+			glVertex3s(v1.x, sector.ceilingheight, v1.y);
 		}
 	}
 	else {
@@ -79,13 +89,13 @@ void handleNode(short nodeValue, vertex_t* eye) {
 void traverseTree(node_t* node, vertex_t* eye) {
 	int result = classifyNode(node, eye);
 	if (result == CP_BACK) {
-		handleNode(node->leftNode, eye);
-		handleNode(node->rightNode, eye);
+		handleNode(node->leftNode, eye, 0);
+		handleNode(node->rightNode, eye, 1);
 		return;
 	}
 	else {
-		handleNode(node->rightNode, eye);
-		handleNode(node->leftNode, eye);
+		handleNode(node->rightNode, eye, 1);
+		handleNode(node->leftNode, eye, 0);
 	}
 	/*handleNode(node->rightNode, eye);
 	handleNode(node->leftNode, eye);*/
@@ -145,10 +155,12 @@ void main() {
 
 	glEnable(GL_DEPTH_TEST);
 	float rotation = 90;
-	while (window_update())
+	while (running)
 	{
+		window_update();
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
+
 		glEnable(GL_DEPTH_TEST);
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();

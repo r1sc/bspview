@@ -37,12 +37,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_CLOSE:
-		wglMakeCurrent(NULL, NULL);
-		wglDeleteContext(glContext);
 		DestroyWindow(hwnd);
 		break;
 	case WM_DESTROY:
-		PostQuitMessage(0);
+		wglMakeCurrent(NULL, NULL);
+		wglDeleteContext(glContext);
+		running = FALSE;
+		PostQuitMessage(0);		
 		break;
 	case WM_KEYDOWN:
 		KEYSDOWN[wParam] = TRUE;
@@ -58,7 +59,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 const char* windowClassName = "bspviewWindowClass";
 void window_open(int width, int height)
-{
+{	
 	for (int i = 0; i < 255; i++)
 	{
 		KEYSDOWN[i] = FALSE;
@@ -102,17 +103,17 @@ void window_open(int width, int height)
 
 	ShowWindow(hwnd, 1);
 	UpdateWindow(hwnd);
+	running = TRUE;
 }
 
 MSG msg;
-int window_update() {
-	int numMessages = GetMessage(&msg, NULL, 0, 0) > 0;
-	if(numMessages > 0)
+void window_update() {
+	int messageAvailable = PeekMessage(&msg, NULL, 0, 0, 1) > 0;
+	if(messageAvailable)
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-	return numMessages;
 }
 
 void window_swap() {
