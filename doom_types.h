@@ -116,7 +116,7 @@ typedef struct {
 	node_t*		nodes;
 
 	int			numSubSectors;
-	seg_t*		subSectors;
+	ssector_t*		subSectors;
 } map_t;
 
 // Lump info

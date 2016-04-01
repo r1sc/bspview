@@ -44,6 +44,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
+	case WM_KEYDOWN:
+		KEYSDOWN[wParam] = TRUE;
+		break;
+	case WM_KEYUP:
+		KEYSDOWN[wParam] = FALSE;
+		break;
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
@@ -53,6 +59,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 const char* windowClassName = "bspviewWindowClass";
 void window_open(int width, int height)
 {
+	for (int i = 0; i < 255; i++)
+	{
+		KEYSDOWN[i] = FALSE;
+	}
+
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = 0;
 	wc.lpfnWndProc = WndProc;

@@ -6,6 +6,7 @@ HWND hwnd;
 HGLRC glContext;
 HDC windowDeviceContext;
 
+char KEYSDOWN[255];
 void window_open(int width, int height);
 int window_update();
 void window_swap();
