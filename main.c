@@ -36,6 +36,7 @@ int isPointInBoundingBox(const bbox_t* box, const vertex_t* point) {
 map_t map;
 
 int classifyNode(node_t* node, vertex_t* point) {
+
 	vertex_t normal;
 	normal.x = node->partitionXOffset;
 	normal.y = node->partitionYOffset;
@@ -51,6 +52,25 @@ int classifyNode(node_t* node, vertex_t* point) {
 	return CP_ONPLANE;
 }
 
+void drawQuad(short x1, short z1, short x2, short z2, short ybottom, short ytop) {
+	glVertex3s(x1, ytop, z1);
+	glVertex3s(x2, ytop, z2);
+	glVertex3s(x2, ybottom, z2);
+	glVertex3s(x1, ybottom, z1);
+}
+
+GLubyte sectorColorMap[] = {
+	255, 255, 255,
+	255, 0, 0,
+	0, 255, 0,
+	0, 0, 255,
+	255, 128, 0,
+	255, 0, 128,
+	128, 255, 0,
+	0, 255, 128,
+	0, 128, 255
+};
+
 void traverseTree(node_t* node, vertex_t* eye);
 void handleNode(short nodeValue, vertex_t* eye, int side) {
 	short value = nodeValue & 0x7FFF;
@@ -61,23 +81,48 @@ void handleNode(short nodeValue, vertex_t* eye, int side) {
 		for (int i = ssector.firstSegIndex; i < ssector.firstSegIndex + ssector.segCount; i++)
 		{
 			seg = map.segs[i];
-			linedef_t lineDef = map.linedefs[seg.linedefIndex];
-			if (lineDef.sidenum[side] == -1)
-				continue;
-			sidedef_t sideDef = map.sidedefs[lineDef.sidenum[side]];
-			sector_t sector = map.sectors[sideDef.sectornum];
+			linedef_t* lineDef = &map.linedefs[seg.linedefIndex];
+			lineDef->tag = side;
+			/*if (lineDef->sidenum[side] == -1)
+				continue;*/
 			vertex_t v1 = map.vertexes[seg.startVertexIndex];
 			vertex_t v2 = map.vertexes[seg.endVertexIndex];
-			glColor3ub(seg.startVertexIndex, seg.startVertexIndex, seg.startVertexIndex);
 
-			glVertex3s(v1.x, sector.floorheight, v1.y);
-			glVertex3s(v2.x, sector.floorheight, v2.y);
-			glVertex3s(v2.x, 0, v2.y);
-			glVertex3s(v1.x, 0, v1.y);
-			glVertex3s(v1.x, sector.ceilingheight + 20, v1.y);
-			glVertex3s(v2.x, sector.ceilingheight + 20, v2.y);
-			glVertex3s(v2.x, sector.ceilingheight, v2.y);
-			glVertex3s(v1.x, sector.ceilingheight, v1.y);
+			short floorHeightMin = SHRT_MAX, floorHeightMax = 0, ceilingHeightMin = SHRT_MAX, ceilingHeightMax = 0;
+
+			if (lineDef->sidenum[0] != -1) {
+				sidedef_t leftSide = map.sidedefs[lineDef->sidenum[0]];
+				sector_t leftSector = map.sectors[leftSide.sectornum];
+				floorHeightMin = leftSector.floorheight;
+				floorHeightMax = leftSector.floorheight;
+				ceilingHeightMin = leftSector.ceilingheight;
+				ceilingHeightMax = leftSector.ceilingheight;
+			}
+
+			if (lineDef->sidenum[1] != -1) {
+				sidedef_t rightSide = map.sidedefs[lineDef->sidenum[1]];
+				sector_t rightSector = map.sectors[rightSide.sectornum];
+				floorHeightMin = min(floorHeightMin, rightSector.floorheight);
+				ceilingHeightMin = min(ceilingHeightMin, rightSector.ceilingheight);
+				floorHeightMax = max(floorHeightMax, rightSector.floorheight);
+				ceilingHeightMax = max(ceilingHeightMax, rightSector.ceilingheight);
+
+			}
+
+			glColor3ub(sectorColorMap[(seg.linedefIndex % 9) * 3], sectorColorMap[(seg.linedefIndex % 9) * 3 + 1], sectorColorMap[(seg.linedefIndex % 9) * 3 + 2]);
+
+			if (lineDef->sidenum[0] == -1 || lineDef->sidenum[1] == -1) {
+				drawQuad(v1.x, v1.y, v2.x, v2.y, floorHeightMax, ceilingHeightMin);
+				continue;
+			}
+			if (floorHeightMin != floorHeightMax) {
+				drawQuad(v1.x, v1.y, v2.x, v2.y, floorHeightMin, floorHeightMax);
+			}
+			if (ceilingHeightMin != ceilingHeightMax) {
+				drawQuad(v1.x, v1.y, v2.x, v2.y, ceilingHeightMin, ceilingHeightMax);
+			}
+			/*glVertex3s(v1.x, sector.floorheight, v1.y);
+			glVertex3s(v1.x, sector.ceilingheight, v1.y);*/
 		}
 	}
 	else {
@@ -94,8 +139,8 @@ void traverseTree(node_t* node, vertex_t* eye) {
 		return;
 	}
 	else {
-		handleNode(node->rightNode, eye, 1);
-		handleNode(node->leftNode, eye, 0);
+		handleNode(node->rightNode, eye, 0);
+		handleNode(node->leftNode, eye, 1);
 	}
 	/*handleNode(node->rightNode, eye);
 	handleNode(node->leftNode, eye);*/
@@ -107,7 +152,7 @@ void perspectiveGL(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar
 	GLdouble fW, fH;
 	fH = tan(fovY / 360 * pi) * zNear;
 	fW = fH * aspect;
-	glFrustum(-fW, fW, -fH, fH, zNear, zFar);
+	glFrustum(fW, -fW, -fH, fH, zNear, zFar);
 }
 
 void main() {
@@ -186,6 +231,12 @@ void main() {
 		glBegin(GL_LINES);
 		for (int i = 0; i < map.numLinedefs; i++)
 		{
+			if (map.linedefs[i].tag == 1)
+				glColor3ub(255, 0, 0);
+			else
+			{
+				glColor3ub(255, 255, 255);
+			}
 			vertex_t v1 = map.vertexes[map.linedefs[i].v1];
 			vertex_t v2 = map.vertexes[map.linedefs[i].v2];
 			glVertex2s(v1.x, v1.y);
@@ -199,18 +250,18 @@ void main() {
 		glEnd();
 
 		if (KEYSDOWN[VK_LEFT])
-			rotation -= 5;
+			rotation += 3;
 		if (KEYSDOWN[VK_RIGHT])
-			rotation += 5;
+			rotation -= 3;
 		if (KEYSDOWN[VK_UP])
 		{
-			eye.x -= cos(rotation * (pi / 180.0)) * 50;
-			eye.y -= sin(rotation * (pi / 180.0)) * 50;
+			eye.x -= cos(rotation * (pi / 180.0)) * 20;
+			eye.y -= sin(rotation * (pi / 180.0)) * 20;
 		}
 		if (KEYSDOWN[VK_DOWN])
 		{
-			eye.x += cos(rotation * (pi / 180.0)) * 50;
-			eye.y += sin(rotation * (pi / 180.0)) * 50;
+			eye.x += cos(rotation * (pi / 180.0)) * 20;
+			eye.y += sin(rotation * (pi / 180.0)) * 20;
 		}
 		window_swap();
 	}

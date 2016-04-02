@@ -29,7 +29,7 @@ typedef struct {
 	char	uppertexture[8];
 	char	lowertexture[8];
 	char	middletexture[8];
-	short	sectornum;		// Sector number this sidedef faces
+	unsigned short	sectornum;		// Sector number this sidedef faces
 } sidedef_t;
 
 // ALL TEH THINGS!!
@@ -53,7 +53,7 @@ typedef struct {
 	short startVertexIndex;
 	short endVertexIndex;
 	short angle;
-	short linedefIndex;
+	unsigned short linedefIndex;
 	short direction;
 	short offset;
 }  seg_t;
