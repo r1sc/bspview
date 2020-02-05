@@ -68,14 +68,12 @@ typedef struct {
 } bbox_t;
 
 typedef struct {
-	short partitionX;
-	short partitionY;
-	short partitionXOffset;
-	short partitionYOffset;
-	bbox_t leftBBox;
-	bbox_t rightBBox;
-	short leftNode;
-	short rightNode;
+	short x;
+	short y;
+	short dx;
+	short dy;
+	bbox_t bbox[2];
+	short children[2];
 } node_t;
 
 // SECTOR 

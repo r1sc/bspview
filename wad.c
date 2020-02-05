@@ -27,6 +27,7 @@ void wad_open(wad_file_t* wad, const char* path) {
 }
 
 void wad_close(wad_file_t* wad) {
+	free(wad->lumps);
 	fclose(wad->file);
 }
 
