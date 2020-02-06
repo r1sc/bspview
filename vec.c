@@ -9,7 +9,7 @@ int getSideOnLine(short x, short y, short x1, short y1, short dx, short dy) {
 }
 
 int vector_dot(const vertex_t* v1, const vertex_t* v2) {
-	 return v1->x * v2->x + v1->y * v2->y;
+	return v1->x * v2->x + v1->y * v2->y;
 }
 
 float vector_length(const vertex_t* v1) {
@@ -22,21 +22,56 @@ void vector_normalize(vertex_t* v1) {
 	v1->y /= length;
 }
 
-int boxLeftOfLine(const bbox_t* box, short x1, short y1, short x2, short y2) {
-	short dx = x2 - x1;
-	short dy = y2 - y1;
-	int tl = getSideOnLine(box->left, box->top, x1, y1, dx, dy);
-	int tr = getSideOnLine(box->right, box->top, x1, y1, dx, dy);
-	int bl = getSideOnLine(box->left, box->bottom, x1, y1, dx, dy);
-	int br = getSideOnLine(box->right, box->bottom, x1, y1, dx, dy);
-	return tl || tr || bl || br;
+typedef struct {
+	short x;
+	short y;
+	float dx;
+	float dy;
+} linesegment_t;
+
+int getSideOnLineFloat(short x, short y, short x1, short y1, float dx, float dy) {
+	return (x - x1) * dy - (y - y1) * dx < 0;
+}
+
+int pointInFrustum(short x, short y, const linesegment_t* planes) {
+	for (size_t i = 0; i < 2; i++)
+	{
+		if (!getSideOnLineFloat(x, y, planes[i].x, planes[i].y, planes[i].dx, planes[i].dy)) {
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+int boxInPlanes(const bbox_t* box, const linesegment_t* planes) {
+	if (pointInFrustum(box->left, box->top, planes))
+		return TRUE;
+
+	if (pointInFrustum(box->right, box->top, planes))
+		return TRUE;
+
+	if (pointInFrustum(box->left, box->bottom, planes))
+		return TRUE;
+
+	if (pointInFrustum(box->right, box->bottom, planes))
+		return TRUE;
+	return FALSE;
 }
 
 int isBoxInFrustum(const bbox_t* box, const vertex_t* point, const float angle) {
-	float x2 = point->x + cos((angle - 22.5f) * DEG2RAD);
-	float y2 = point->y - sin((angle - 22.5f) * DEG2RAD);
-	float x3 = point->x + cos((angle + 22.5f) * DEG2RAD);
-	float y3 = point->y - sin((angle + 22.5f) * DEG2RAD);
+	if (point->x >= box->left && point->x < box->right && point->y <= box->top && point->y > box->bottom)
+		return TRUE;
+	
+	float dx2 = cos((angle - 22.5f) * DEG2RAD);
+	float dy2 = -sin((angle - 22.5f) * DEG2RAD);
+	float dx3 = cos((angle + 22.5f) * DEG2RAD);
+	float dy3 = -sin((angle + 22.5f) * DEG2RAD);
 
-	return boxLeftOfLine(box, point->x, point->y, x2, y2) && boxLeftOfLine(box, x3, y3, point->x, point->y);
+
+	linesegment_t planes[2] = {
+		{point->x, point->y, -dx2, -dy2},
+		{point->x, point->y, dx3, dy3}
+	};
+
+	return boxInPlanes(box, planes);
 }

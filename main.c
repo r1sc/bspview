@@ -45,51 +45,42 @@ void renderSubsector(short ssectorIdx, int side) {
 	{
 		seg = map.segs[i];
 		linedef_t* lineDef = &map.linedefs[seg.linedefIndex];
-		lineDef->tag = side;
-		/*if (lineDef->sidenum[side] == -1)
-			continue;*/
 		vertex_t v1 = map.vertexes[seg.startVertexIndex];
 		vertex_t v2 = map.vertexes[seg.endVertexIndex];
 
 		short floorHeightMin = SHRT_MAX, floorHeightMax = 0, ceilingHeightMin = SHRT_MAX, ceilingHeightMax = 0;
 		short sidenum = lineDef->sidenum[side];
-		if (sidenum != -1) {
-			sidedef_t sidedef = map.sidedefs[sidenum];
-			sector_t sector = map.sectors[sidedef.sectornum];
-			
-			if (lineDef->sidenum[0] != -1) {
-				sidedef_t leftSide = map.sidedefs[lineDef->sidenum[0]];
-				sector_t leftSector = map.sectors[leftSide.sectornum];
-				floorHeightMin = leftSector.floorheight;
-				floorHeightMax = leftSector.floorheight;
-				ceilingHeightMin = leftSector.ceilingheight;
-				ceilingHeightMax = leftSector.ceilingheight;
-			}
 
-			if (lineDef->sidenum[1] != -1) {
-				sidedef_t rightSide = map.sidedefs[lineDef->sidenum[1]];
-				sector_t rightSector = map.sectors[rightSide.sectornum];
-				floorHeightMin = min(floorHeightMin, rightSector.floorheight);
-				ceilingHeightMin = min(ceilingHeightMin, rightSector.ceilingheight);
-				floorHeightMax = max(floorHeightMax, rightSector.floorheight);
-				ceilingHeightMax = max(ceilingHeightMax, rightSector.ceilingheight);
-			}
-
-			glColor3ub(sectorColorMap[(seg.linedefIndex % 9) * 3], sectorColorMap[(seg.linedefIndex % 9) * 3 + 1], sectorColorMap[(seg.linedefIndex % 9) * 3 + 2]);
-
-			if (lineDef->sidenum[0] == -1 || lineDef->sidenum[1] == -1) {
-				drawQuad(v1.x, v1.y, v2.x, v2.y, floorHeightMax, ceilingHeightMin);
-				continue;
-			}
-			if (floorHeightMin != floorHeightMax) {
-				drawQuad(v1.x, v1.y, v2.x, v2.y, floorHeightMin, floorHeightMax);
-			}
-			if (ceilingHeightMin != ceilingHeightMax) {
-				drawQuad(v1.x, v1.y, v2.x, v2.y, ceilingHeightMin, ceilingHeightMax);
-			}
+		if (lineDef->sidenum[0] != -1) {
+			sidedef_t leftSide = map.sidedefs[lineDef->sidenum[0]];
+			sector_t leftSector = map.sectors[leftSide.sectornum];
+			floorHeightMin = leftSector.floorheight;
+			floorHeightMax = leftSector.floorheight;
+			ceilingHeightMin = leftSector.ceilingheight;
+			ceilingHeightMax = leftSector.ceilingheight;
 		}
-		/*glVertex3s(v1.x, sector.floorheight, v1.y);
-		glVertex3s(v1.x, sector.ceilingheight, v1.y);*/
+
+		if (lineDef->sidenum[1] != -1) {
+			sidedef_t rightSide = map.sidedefs[lineDef->sidenum[1]];
+			sector_t rightSector = map.sectors[rightSide.sectornum];
+			floorHeightMin = min(floorHeightMin, rightSector.floorheight);
+			ceilingHeightMin = min(ceilingHeightMin, rightSector.ceilingheight);
+			floorHeightMax = max(floorHeightMax, rightSector.floorheight);
+			ceilingHeightMax = max(ceilingHeightMax, rightSector.ceilingheight);
+		}
+
+		glColor3ub(sectorColorMap[(seg.linedefIndex % 9) * 3], sectorColorMap[(seg.linedefIndex % 9) * 3 + 1], sectorColorMap[(seg.linedefIndex % 9) * 3 + 2]);
+
+		if (lineDef->sidenum[0] == -1 || lineDef->sidenum[1] == -1) {
+			drawQuad(v1.x, v1.y, v2.x, v2.y, floorHeightMax, ceilingHeightMin);
+			continue;
+		}
+		if (floorHeightMin != floorHeightMax) {
+			drawQuad(v1.x, v1.y, v2.x, v2.y, floorHeightMin, floorHeightMax);
+		}
+		if (ceilingHeightMin != ceilingHeightMax) {
+			drawQuad(v1.x, v1.y, v2.x, v2.y, ceilingHeightMin, ceilingHeightMax);
+		}
 	}
 }
 
@@ -118,41 +109,47 @@ void drawsplit(const node_t* node) {
 	glEnd();
 }
 
-void traverseTree(short nodeIdx, camera_t* camera, int prevSide) {
+void traverseTree(int drawSectors, short nodeIdx, camera_t* camera, int prevSide) {
 	if (nodeIdx >> 15) { // Subsector
-		/*if (nodeIdx == -1)
-			renderSubsector(0, side);
-		else
-			renderSubsector(nodeIdx & NODE_SSECTOR, side);*/
+		if (drawSectors) {
+			glBegin(GL_QUADS);
+			if (nodeIdx == -1)
+				renderSubsector(0, prevSide);
+			else
+				renderSubsector(nodeIdx & NODE_SSECTOR, prevSide);
+			glEnd();
+		}
 	}
 	else {
 		node_t* node = &map.nodes[nodeIdx];
 		int side = getSideOnLine(camera->eye.x, camera->eye.y, node->x, node->y, node->dx, node->dy);
-		
-		if (isBoxInFrustum(&node->bbox[side], &camera->eye, camera->angle)) {
-			glColor3f(1, 1, 0);
-		}
-		else {
-			glColor3f(1, 0, 1);
-		}
-		
-		drawbbox(&node->bbox[side]);
-		/*glColor3f(0, 1, 0);
-		drawbbox(&node->bbox[1-side]);*/
 
-		if (side) {
-			glColor3f(0, 0, 1);
-		}
-		else {
-			glColor3f(0, 1, 0);
-		}
-		drawsplit(node);
+		if (!drawSectors) {
+			if (isBoxInFrustum(&node->bbox[side], &camera->eye, camera->angle)) {
+				glColor3f(1, 1, 0);
+			}
+			else {
+				glColor3f(1, 0, 1);
+			}
 
-		traverseTree(node->children[side], camera, side);
+			drawbbox(&node->bbox[side]);
+
+			if (side) {
+				glColor3f(0, 0, 1);
+			}
+			else {
+				glColor3f(0, 1, 0);
+			}
+			drawsplit(node);
+		}
+
+
+		traverseTree(drawSectors, node->children[side], camera, side);
 
 		//if (isBoxInFrustum(&node->bbox[1 - side], &camera->eye, camera->angle)) {
-		//	//drawbbox(&node->bbox[1-side]);
-		//	traverseTree(node->children[1 - side], camera, 1 - side);
+			if(drawSectors)
+				drawbbox(&node->bbox[1 - side]);
+			traverseTree(drawSectors, node->children[1 - side], camera, 1 - side);
 		//}
 	}
 }
@@ -172,7 +169,6 @@ void main() {
 	map_load(&map, &wadFile, "E1M1");
 
 	window_open(640, 480);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
@@ -208,7 +204,7 @@ void main() {
 		left = root.bbox[0].left;
 
 	glEnable(GL_DEPTH_TEST);
-	
+
 	while (running)
 	{
 		window_update();
@@ -222,9 +218,11 @@ void main() {
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 
-		glRotatef(camera.angle - 90, 0, 1, 0);
+		glRotatef(-camera.angle + 90, 0, 1, 0);
 		glTranslatef(-camera.eye.x, -50, -camera.eye.y);
 
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_POLYGON);
+		traverseTree(1, map.numNodes - 1, &camera, 0);
 
 
 		glDisable(GL_DEPTH_TEST);
@@ -236,7 +234,8 @@ void main() {
 		glLoadIdentity();
 
 
-		traverseTree(map.numNodes - 1, &camera, 0);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//traverseTree(0, map.numNodes - 1, &camera, 0);
 
 		glBegin(GL_LINES);
 		for (int i = 0; i < map.numLinedefs; i++)
