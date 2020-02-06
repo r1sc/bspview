@@ -8,6 +8,8 @@
 #include "bsp.h"
 #include "vec.h"
 
+const float pi = 3.1415926535897932384626433832795;
+
 map_t map;
 
 void drawQuad(short x1, short z1, short x2, short z2, short ybottom, short ytop) {
@@ -31,6 +33,11 @@ GLubyte sectorColorMap[] = {
 
 #define NODE_SSECTOR 0x7FFF
 
+typedef struct {
+	vertex_t eye;
+	float angle;
+} camera_t;
+
 void renderSubsector(short ssectorIdx, int side) {
 	ssector_t ssector = map.subSectors[ssectorIdx];
 	seg_t seg;
@@ -45,18 +52,35 @@ void renderSubsector(short ssectorIdx, int side) {
 		vertex_t v2 = map.vertexes[seg.endVertexIndex];
 
 		short floorHeightMin = SHRT_MAX, floorHeightMax = 0, ceilingHeightMin = SHRT_MAX, ceilingHeightMax = 0;
-
-		if (lineDef->sidenum[side] != -1) {
-			sidedef_t leftSide = map.sidedefs[lineDef->sidenum[side]];
-			sector_t leftSector = map.sectors[leftSide.sectornum];
-			floorHeightMin = leftSector.floorheight;
-			floorHeightMax = leftSector.floorheight;
-			ceilingHeightMin = leftSector.ceilingheight;
-			ceilingHeightMax = leftSector.ceilingheight;
+		short sidenum = lineDef->sidenum[side];
+		if (sidenum != -1) {
+			sidedef_t sidedef = map.sidedefs[sidenum];
+			sector_t sector = map.sectors[sidedef.sectornum];
 			
+			if (lineDef->sidenum[0] != -1) {
+				sidedef_t leftSide = map.sidedefs[lineDef->sidenum[0]];
+				sector_t leftSector = map.sectors[leftSide.sectornum];
+				floorHeightMin = leftSector.floorheight;
+				floorHeightMax = leftSector.floorheight;
+				ceilingHeightMin = leftSector.ceilingheight;
+				ceilingHeightMax = leftSector.ceilingheight;
+			}
+
+			if (lineDef->sidenum[1] != -1) {
+				sidedef_t rightSide = map.sidedefs[lineDef->sidenum[1]];
+				sector_t rightSector = map.sectors[rightSide.sectornum];
+				floorHeightMin = min(floorHeightMin, rightSector.floorheight);
+				ceilingHeightMin = min(ceilingHeightMin, rightSector.ceilingheight);
+				floorHeightMax = max(floorHeightMax, rightSector.floorheight);
+				ceilingHeightMax = max(ceilingHeightMax, rightSector.ceilingheight);
+			}
+
 			glColor3ub(sectorColorMap[(seg.linedefIndex % 9) * 3], sectorColorMap[(seg.linedefIndex % 9) * 3 + 1], sectorColorMap[(seg.linedefIndex % 9) * 3 + 2]);
 
-			drawQuad(v1.x, v1.y, v2.x, v2.y, floorHeightMax, ceilingHeightMin);
+			if (lineDef->sidenum[0] == -1 || lineDef->sidenum[1] == -1) {
+				drawQuad(v1.x, v1.y, v2.x, v2.y, floorHeightMax, ceilingHeightMin);
+				continue;
+			}
 			if (floorHeightMin != floorHeightMax) {
 				drawQuad(v1.x, v1.y, v2.x, v2.y, floorHeightMin, floorHeightMax);
 			}
@@ -69,26 +93,70 @@ void renderSubsector(short ssectorIdx, int side) {
 	}
 }
 
-void traverseTree(short nodeIdx, vertex_t* eye, int side) {
+void drawbbox(const bbox_t* bbox) {
+
+	glBegin(GL_QUADS);
+	glVertex2s(bbox->left, bbox->top);
+	glVertex2s(bbox->right, bbox->top);
+	glVertex2s(bbox->right, bbox->bottom);
+	glVertex2s(bbox->left, bbox->bottom);
+	glEnd();
+}
+
+void drawsplit(const node_t* node) {
+	glBegin(GL_LINES);
+	glVertex2s(node->x, node->y);
+	glVertex2s(node->x + node->dx * 10, node->y + node->dy * 10);
+	glEnd();
+
+	glColor3f(1, 0, 0);
+	glBegin(GL_QUADS);
+	glVertex2s(node->x - 20, node->y - 20);
+	glVertex2s(node->x + 20, node->y - 20);
+	glVertex2s(node->x + 20, node->y + 20);
+	glVertex2s(node->x - 20, node->y + 20);
+	glEnd();
+}
+
+void traverseTree(short nodeIdx, camera_t* camera, int prevSide) {
 	if (nodeIdx >> 15) { // Subsector
-		if (nodeIdx == -1)
+		/*if (nodeIdx == -1)
 			renderSubsector(0, side);
 		else
-			renderSubsector(nodeIdx & NODE_SSECTOR, side);
+			renderSubsector(nodeIdx & NODE_SSECTOR, side);*/
 	}
 	else {
 		node_t* node = &map.nodes[nodeIdx];
-		int side = getSideOnLine(node, eye);
-
-		traverseTree(node->children[side], eye, side);
-
-		if (isPointInBoundingBox(&node->bbox[1 - side], eye, 1 - side)) {
-			traverseTree(node->children[1 - side], eye, 1 - side);
+		int side = getSideOnLine(camera->eye.x, camera->eye.y, node->x, node->y, node->dx, node->dy);
+		
+		if (isBoxInFrustum(&node->bbox[side], &camera->eye, camera->angle)) {
+			glColor3f(1, 1, 0);
 		}
+		else {
+			glColor3f(1, 0, 1);
+		}
+		
+		drawbbox(&node->bbox[side]);
+		/*glColor3f(0, 1, 0);
+		drawbbox(&node->bbox[1-side]);*/
+
+		if (side) {
+			glColor3f(0, 0, 1);
+		}
+		else {
+			glColor3f(0, 1, 0);
+		}
+		drawsplit(node);
+
+		traverseTree(node->children[side], camera, side);
+
+		//if (isBoxInFrustum(&node->bbox[1 - side], &camera->eye, camera->angle)) {
+		//	//drawbbox(&node->bbox[1-side]);
+		//	traverseTree(node->children[1 - side], camera, 1 - side);
+		//}
 	}
 }
 
-const GLdouble pi = 3.1415926535897932384626433832795;
 void perspectiveGL(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar)
 {
 	GLdouble fW, fH;
@@ -104,14 +172,17 @@ void main() {
 	map_load(&map, &wadFile, "E1M1");
 
 	window_open(640, 480);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	GLdouble padding = 100;
+	GLdouble padding = 2000;
 
-	vertex_t eye;
-	eye.x = 1000;
-	eye.y = 500;
+	camera_t camera;
+	camera.eye.x = 1000;
+	camera.eye.y = -2500;
+	camera.angle = 90;
+
 	node_t root = map.nodes[map.numNodes - 1];
 
 	short top, bottom, left, right;
@@ -137,7 +208,7 @@ void main() {
 		left = root.bbox[0].left;
 
 	glEnable(GL_DEPTH_TEST);
-	float rotation = 90;
+	
 	while (running)
 	{
 		window_update();
@@ -151,11 +222,9 @@ void main() {
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 
-		glRotatef(rotation - 90, 0, 1, 0);
-		glTranslatef(-eye.x, -50, -eye.y);
-		glBegin(GL_QUADS);
-		traverseTree(map.numNodes - 1, &eye, 0);
-		glEnd();
+		glRotatef(camera.angle - 90, 0, 1, 0);
+		glTranslatef(-camera.eye.x, -50, -camera.eye.y);
+
 
 
 		glDisable(GL_DEPTH_TEST);
@@ -165,6 +234,9 @@ void main() {
 		glOrtho(left - padding, right + padding, bottom - padding, top + padding, -1, 1);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
+
+
+		traverseTree(map.numNodes - 1, &camera, 0);
 
 		glBegin(GL_LINES);
 		for (int i = 0; i < map.numLinedefs; i++)
@@ -183,23 +255,25 @@ void main() {
 		glEnd();
 		glColor3f(0, 1, 1);
 		glBegin(GL_LINES);
-		glVertex2s(eye.x, eye.y);
-		glVertex2s(eye.x - cos(rotation * (pi / 180.0)) * 100, eye.y - sin(rotation * (pi / 180.0)) * 100);
+		glVertex2s(camera.eye.x, camera.eye.y);
+		glVertex2s(camera.eye.x + cos((camera.angle - 22.5f) * DEG2RAD) * 200, camera.eye.y - sin((camera.angle - 22.5f) * DEG2RAD) * 200);
+		glVertex2s(camera.eye.x, camera.eye.y);
+		glVertex2s(camera.eye.x + cos((camera.angle + 22.5f) * DEG2RAD) * 200, camera.eye.y - sin((camera.angle + 22.5f) * DEG2RAD) * 200);
 		glEnd();
 
 		if (KEYSDOWN[VK_LEFT])
-			rotation += 3;
+			camera.angle -= 3;
 		if (KEYSDOWN[VK_RIGHT])
-			rotation -= 3;
+			camera.angle += 3;
 		if (KEYSDOWN[VK_UP])
 		{
-			eye.x -= cos(rotation * (pi / 180.0)) * 20;
-			eye.y -= sin(rotation * (pi / 180.0)) * 20;
+			camera.eye.x += cos(camera.angle * DEG2RAD) * 20;
+			camera.eye.y -= sin(camera.angle * DEG2RAD) * 20;
 		}
 		if (KEYSDOWN[VK_DOWN])
 		{
-			eye.x += cos(rotation * (pi / 180.0)) * 20;
-			eye.y += sin(rotation * (pi / 180.0)) * 20;
+			camera.eye.x -= cos(camera.angle * DEG2RAD) * 20;
+			camera.eye.y += sin(camera.angle * DEG2RAD) * 20;
 		}
 		window_swap();
 	}
